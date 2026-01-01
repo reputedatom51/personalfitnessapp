@@ -4,6 +4,38 @@ import os
 from datetime import datetime
 import pandas as pd
 
+# --- PASSWORD PROTECTION ---
+def check_password():
+    """Returns `True` if the user had the correct password."""
+    
+    # 1. If password is already correct, return True
+    if st.session_state.get("password_correct", False):
+        return True
+
+    # 2. Show input for password
+    st.header("🔒 Login Required")
+    pwd = st.text_input("Enter Password", type="password")
+    
+    if st.button("Log In"):
+        # REPLACE "gym2025" WITH YOUR DESIRED PASSWORD
+        if pwd == "Tinted1!":
+            st.session_state["password_correct"] = True
+            st.rerun()  # Reloads the app to show the content
+        else:
+            st.error("❌ Incorrect Password")
+            
+    return False
+
+# Stop the app here if password is wrong
+if not check_password():
+    st.stop()
+
+# --- YOUR APP STARTS HERE ---
+# (Paste the rest of your original code below this line)
+import json
+import os
+# ... etc ...
+
 # --- CONFIGURATION ---
 DATA_FILE = "fitness_data.json"
 st.set_page_config(page_title="Fitness Coach", page_icon="💪")
