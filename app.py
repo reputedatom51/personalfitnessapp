@@ -16,7 +16,7 @@ def check_password():
     st.header("🔒 Login Required")
     pwd = st.text_input("Enter Password", type="password")
     if st.button("Log In"):
-        if pwd == "gym2025": # CHANGE THIS
+        if pwd == "password1": # CHANGE THIS
             st.session_state["password_correct"] = True
             st.rerun()
         else: st.error("❌ Incorrect Password")
