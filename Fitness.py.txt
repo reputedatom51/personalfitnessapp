@@ -1,0 +1,190 @@
+import json
+import os
+from datetime import datetime
+
+# --- CONFIGURATION ---
+DATA_FILE = "fitness_data.json"
+
+# --- THE ROUTINE ---
+ROUTINE = {
+    "Monday": {
+        "Focus": "UPPER BODY A (Push/Pull)",
+        "Exercises": ["Chest Press", "Seated Row", "Shoulder Press", "Lat Pulldown", "Plank"]
+    },
+    "Tuesday": {
+        "Focus": "LOWER BODY (Legs)",
+        "Exercises": ["Leg Press", "Goblet Squat", "Leg Curls", "Lunges", "Calf Raises"]
+    },
+    "Wednesday": {
+        "Focus": "ARMS & ABS",
+        "Exercises": ["Tricep Pushdown", "Bicep Curls", "Overhead Tri Ext", "Hammer Curls", "Russian Twists"]
+    },
+    "Thursday": {
+        "Focus": "UPPER BODY B (Isolation)",
+        "Exercises": ["Pec Fly", "Rear Delt Fly", "Assisted Pull-Up", "Lateral Raises", "Face Pulls"]
+    },
+    "Friday": {
+        "Focus": "FULL BODY GAUNTLET (Circuit)",
+        "Exercises": ["Chest Press", "Leg Press", "Seated Row", "Shoulder Press", "Bicep Curls"]
+    }
+}
+
+def load_data():
+    if os.path.exists(DATA_FILE):
+        with open(DATA_FILE, 'r') as f:
+            data = json.load(f)
+            # Ensure all keys exist if loading an older file version
+            for key in ["history", "prs", "body_weight", "calories"]:
+                if key not in data: data[key] = [] if key != "prs" else {}
+            return data
+    return {"history": [], "prs": {}, "body_weight": [], "calories": []}
+
+def save_data(data):
+    with open(DATA_FILE, 'w') as f:
+        json.dump(data, f, indent=4)
+
+# --- FEATURE 1: WORKOUT COACH ---
+def get_coach_recommendation(data, exercise):
+    current_pr = data["prs"].get(exercise, 0)
+    if current_pr == 0: return "New Exercise! Start moderate."
+    target = int(current_pr * 1.05)
+    return f"Current PR: {current_pr} lbs. --> COACH GOAL: Try {target} lbs!"
+
+def start_workout(data):
+    day = datetime.now().strftime("%A")
+    if day not in ROUTINE:
+        print(f"\nRest Day ({day}). Go for a walk!")
+        return
+
+    plan = ROUTINE[day]
+    print(f"\n=== {day.upper()}: {plan['Focus']} ===")
+    
+    session_log = {"date": datetime.now().strftime("%Y-%m-%d"), "day": day, "exercises": {}}
+    
+    for exercise in plan['Exercises']:
+        print(f"\n>>> {exercise.upper()}")
+        print(get_coach_recommendation(data, exercise))
+        
+        try:
+            if exercise in ["Plank", "Russian Twists", "Burpees"]:
+                result = input(f"   Time/Reps achieved: ")
+                weight = 0
+            else:
+                weight = float(input(f"   Max Weight Lifted (lbs): "))
+                result = f"{weight} lbs"
+                
+                # PR CHECK
+                old_pr = data["prs"].get(exercise, 0)
+                if weight > old_pr:
+                    print(f"   *** NEW PR! (+{weight - old_pr} lbs) ***")
+                    data["prs"][exercise] = weight
+                    
+            session_log["exercises"][exercise] = result
+        except ValueError:
+            print("   (Skipped)")
+    
+    data["history"].append(session_log)
+    save_data(data)
+    print("\nWorkout Saved.")
+
+# --- FEATURE 2: BODY WEIGHT TRACKING ---
+def log_weight(data):
+    print("\n--- BODY WEIGHT LOG ---")
+    try:
+        current = float(input("Enter today's weight (lbs): "))
+        entry = {"date": datetime.now().strftime("%Y-%m-%d"), "weight": current}
+        data["body_weight"].append(entry)
+        save_data(data)
+        print("Weight saved.")
+    except ValueError:
+        print("Invalid number.")
+
+def plot_weight(data):
+    history = data["body_weight"]
+    if not history:
+        print("\nNo weight data logged yet.")
+        return
+
+    print("\n=== WEIGHT TREND ===")
+    history.sort(key=lambda x: x['date'])
+    for entry in history[-10:]:
+        date_short = entry['date'][5:]
+        w = entry['weight']
+        bar = "#" * int(w - 150) # Scale for visibility
+        print(f"{date_short} | {w} lbs | {bar}")
+
+# --- FEATURE 3: CALORIE & PROTEIN TRACKER ---
+def log_calories(data):
+    print("\n--- NUTRITION LOG ---")
+    try:
+        cals = int(input("Total Calories Today: "))
+        prot = int(input("Total Protein (g): "))
+        
+        # Calculate Delta
+        cal_goal = 2300
+        prot_goal = 180
+        
+        print(f"   > Calories: {cals} (Goal: {cal_goal}) --> Diff: {cals - cal_goal}")
+        print(f"   > Protein:  {prot}g (Goal: {prot_goal}g) --> Diff: {prot - prot_goal}")
+        
+        entry = {
+            "date": datetime.now().strftime("%Y-%m-%d"), 
+            "calories": cals, 
+            "protein": prot
+        }
+        data["calories"].append(entry)
+        save_data(data)
+        print("Nutrition saved.")
+    except ValueError:
+        print("Invalid number.")
+
+def plot_calories(data):
+    history = data["calories"]
+    if not history:
+        print("\nNo nutrition data logged yet.")
+        return
+
+    print("\n=== CALORIE CONSISTENCY ===")
+    print("Goal Line: 2300 | [***] means you hit protein goal (180g)")
+    history.sort(key=lambda x: x['date'])
+    
+    for entry in history[-10:]:
+        date_short = entry['date'][5:]
+        c = entry['calories']
+        p = entry['protein']
+        
+        # Visual Marker for Protein Goal
+        p_mark = "[***]" if p >= 180 else "[   ]"
+        
+        # Simple bar graph for calories (1 char = 100 cals)
+        bar_len = int(c / 100)
+        bar = "=" * bar_len
+        
+        print(f"{date_short} | {c} cals {p_mark} | {bar}")
+
+def main():
+    data = load_data()
+    while True:
+        print("\n--- FITNESS DASHBOARD ---")
+        print("1. Start Workout (Coach Mode)")
+        print("2. Log Body Weight")
+        print("3. Log Nutrition (Calories/Protein)")
+        print("4. View Graphs (Weight & Nutrition)")
+        print("5. View Gym PRs")
+        print("6. Exit")
+        
+        choice = input("Choose: ")
+        
+        if choice == '1': start_workout(data)
+        elif choice == '2': log_weight(data)
+        elif choice == '3': log_calories(data)
+        elif choice == '4': 
+            plot_weight(data)
+            plot_calories(data)
+        elif choice == '5': 
+            print("\n=== CURRENT PRs ===")
+            for ex, w in data["prs"].items(): print(f"{ex}: {w} lbs")
+        elif choice == '6': break
+
+if __name__ == "__main__":
+    main()
