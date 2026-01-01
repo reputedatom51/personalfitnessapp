@@ -14,9 +14,9 @@ st.set_page_config(page_title="Fitness Coach", page_icon="💪")
 def check_password():
     if st.session_state.get("password_correct", False): return True
     st.header("🔒 Login Required")
-    pwd = st.text_input("Enter Password", type="password1")
+    pwd = st.text_input("Enter Password", type="password")
     if st.button("Log In"):
-        if pwd == "gym2025":  # CHANGE THIS!
+        if pwd == "password1":
             st.session_state["password_correct"] = True
             st.rerun()
         else: st.error("❌ Incorrect Password")
